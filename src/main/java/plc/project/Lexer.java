@@ -63,6 +63,7 @@ public final class Lexer {
     }
 
     public Token lexOperator() {
+        int okay=0;
         throw new UnsupportedOperationException(); //TODO
     }
 
