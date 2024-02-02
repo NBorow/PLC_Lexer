@@ -1,7 +1,7 @@
 package plc.project;
 
 import java.util.List;
-
+import java.util.ArrayList;
 /**
  * The lexer works through three main functions:
  *
@@ -27,7 +27,24 @@ public final class Lexer {
      * whitespace where appropriate.
      */
     public List<Token> lex() {
-        throw new UnsupportedOperationException(); //TODO
+        List<Token> tokens = new ArrayList<>();
+        int ind=-1;
+        while (chars.has(0)) {
+            if (peek( " ", "\\n", "\\r", "\\t")) {
+                System.out.println("FoundSpec");
+                match(" ", "\\n", "\\r", "\\t");
+            } else {
+                tokens.add(lexToken());
+                ind++;
+             // System.out.println(tokens.get(ind).toString());
+            }
+        }
+       /* for(int i=0;i<tokens.size();i++){
+            System.out.println(tokens.get(ind).toString());
+
+        }*/
+      //  System.out.println("Return Tokens");
+        return tokens;
     }
 
     /**
@@ -39,41 +56,170 @@ public final class Lexer {
      * by {@link #lex()}
      */
     public Token lexToken() {
-        throw new UnsupportedOperationException(); //TODO
+        if (peek("[a-zA-Z@]")) {
+           //System.out.println("FoundIdent");
+            return lexIdentifier();
+        } else if (peek("[0-9]") || peek("-")) {
+           //System.out.println("FoundNum");
+            return lexNumber();
+        } else if (peek("'")) {
+           // System.out.println("FoundChar");
+            return lexCharacter();
+        } else if (peek("\"")) {
+            //System.out.println("FoundString");
+            return lexString();
+        } else {
+           // System.out.println("FoundOp");
+            return lexOperator();
+        }
     }
 
+
     public Token lexIdentifier() {
-        throw new UnsupportedOperationException(); //TODO
+        if (peek("@")) match("@");
+        if (peek("[a-zA-Z]")) {
+            while (peek("[a-zA-Z0-9_-]")) {
+                match("[a-zA-Z0-9_-]");
+            }
+            return chars.emit(Token.Type.IDENTIFIER);
+        }
+        throw new ParseException("Expected identifier", chars.index);
     }
 
     public Token lexNumber() {
-        throw new UnsupportedOperationException(); //TODO
+        boolean isDecimal = false;
+        if (peek("-")) match("-"); // Match an optional leading minus
+
+        // Check for leading zero which could lead to a decimal
+        if (peek("0")) {
+            match("0");
+            if (peek("\\.")) { // It's a decimal if there's a dot following the zero
+                match("\\.");
+                if (!peek("[0-9]")) {
+                    throw new ParseException("Expected digit after decimal point", chars.index);
+                }
+                isDecimal = true; // Mark as decimal since we found a dot
+            } else if (peek("[0-9]")) {
+                // If there's another digit after 0, it's an error
+                throw new ParseException("Leading zeros are not allowed", chars.index);
+            }
+        } else if (peek("[1-9]")) {
+            match("[1-9]");
+            while (peek("[0-9]")) match("[0-9]"); // Match the rest of any digits
+        } else {
+            // No valid start for a number
+            throw new ParseException("Expected digit", chars.index);
+        }
+
+        // Handle the decimal part after ensuring the integer part is correct
+        if (peek("\\.")) {
+            match("\\.");
+            if (!peek("[0-9]")) {
+                throw new ParseException("Expected digit after decimal point", chars.index);
+            }
+            while (peek("[0-9]")) match("[0-9]");
+            isDecimal = true; // Confirm it's a decimal after matching the fractional part
+        }
+
+        if (isDecimal){
+            return chars.emit(Token.Type.DECIMAL);
+
+        }
+    else {return chars.emit(Token.Type.INTEGER);}
+
+
     }
+
+
+    // Emit the appropriate token type based on whether a decimal point was part of the number
+
+
+
+
+
+
 
     public Token lexCharacter() {
-        throw new UnsupportedOperationException(); //TODO
+        match("'");
+        if (peek("\\\\")) { // Start of an escape sequence
+            lexEscape(); // Handle the escape sequence
+        } else if (!match("[^']")) { // Match any character except a single quote
+            throw new ParseException("Invalid character literal", chars.index);
+        }
+        if (!match("'")) { // Ensure the character literal is properly closed
+            throw new ParseException("Unterminated character literal", chars.index);
+        }
+        return chars.emit(Token.Type.CHARACTER);
     }
+
 
     public Token lexString() {
-        throw new UnsupportedOperationException(); //TODO
+        match("\"");
+        while (!peek("\"")) { // Process until the closing double quote
+            if (peek("\\\\")) { // Start of an escape sequence
+                lexEscape(); // Handle the escape sequence
+            } else if (!match("[^\"\\\\]")) { // Match any character except double quote or backslash
+                throw new ParseException("Invalid string literal", chars.index);
+            }
+            if (!chars.has(0)) { // Check if end of input is reached without closing quote
+                throw new ParseException("Unterminated string literal", chars.index);
+            }
+        }
+        match("\""); // Consume the closing double quote
+        return chars.emit(Token.Type.STRING);
     }
+
 
     public void lexEscape() {
-        throw new UnsupportedOperationException(); //TODO
+        match("\\\\"); // Match the leading backslash of the escape sequence.
+        if (!match("[bnrt'\"\\\\]")) { // Match valid escape characters.
+            throw new ParseException("Invalid escape sequence", chars.index);
+        }
     }
 
+
+
     public Token lexOperator() {
-        int okay=0;
-        throw new UnsupportedOperationException(); //TODO
+        // First, handle compound operators explicitly to ensure they are matched correctly
+        if (peek("!=") || peek("==")) {
+            if (peek("!=")) {
+                match("!=");
+            } else if (peek("==")) {
+                match("==");
+            }
+            return chars.emit(Token.Type.OPERATOR);
+        }
+        // Include handling for semicolon and single character operators
+        if (peek("[;!=><+\\-*/%()]")) {
+            match("[;!=><+\\-*/%()]");
+            // Special handling for '=' to ensure it's not part of a compound operator missed earlier
+            if (peek("=")) {
+                // This should not happen due to the initial check for compound operators, but it's here for safety
+                match("=");
+            }
+            return chars.emit(Token.Type.OPERATOR);
+        } else {
+            throw new ParseException("Expected operator", chars.index);
+        }
     }
+
+
+
 
     /**
      * Returns true if the next sequence of characters match the given patterns,
      * which should be a regex. For example, {@code peek("a", "b", "c")} would
      * return true if the next characters are {@code 'a', 'b', 'c'}.
      */
+
+
     public boolean peek(String... patterns) {
-        throw new UnsupportedOperationException(); //TODO (in Lecture)
+        for(int i=0; i<patterns.length;i++){
+            if (!chars.has(i) || !String.valueOf(chars.get(i)).matches(patterns[i])){
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -82,7 +228,13 @@ public final class Lexer {
      * true. Hint - it's easiest to have this method simply call peek.
      */
     public boolean match(String... patterns) {
-        throw new UnsupportedOperationException(); //TODO (in Lecture)
+       boolean peek=peek(patterns);
+       if (peek) {
+           for(int i=0;i<patterns.length;i++){
+               chars.advance();
+           }
+       }
+       return peek;
     }
 
     /**
@@ -108,6 +260,7 @@ public final class Lexer {
         }
 
         public char get(int offset) {
+         //   System.out.println(input.charAt(index + offset));
             return input.charAt(index + offset);
         }
 
