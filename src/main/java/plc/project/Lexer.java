@@ -67,30 +67,46 @@ public final class Lexer {
     }
 
     public Token lexNumber() {
-        /*
-        // Int checking
-        // Negative Numbers
+        boolean isDecimal = false;
+        // Negatives
         if (match("-")) {
-            if (match("[1-9]")) {
-                while (match("[0-9]"));
+            // Check if Negative Decimal or Non-zero
+            // JAVA IS SHORT CIRCUITING MEANING THE REMAINING STATEMENTS WON'T EVALUATE IF THE PRECEDING IS/ARE TRUE
+            if (peek("0\\.") || peek("[1-9]") || chars.index == chars.length) {
+                // all good!
             }
-            else throw new ParseException("invalid", chars.index);
+            else {
+                throw new ParseException("invalid", chars.index);
+            }
+            if (match("0\\.")) isDecimal = true;
         }
         // Leading Zeros
-        else if (match("0")) {
-            if(peek("[0-9]")) throw new ParseException("invalid", chars.index);
+        else if (peek("0")) {
+            // Only char that can follow a 0 is a decimal [UNLESS IT'S JUST A ZERO]
+            if (peek("[ \\n\\r\\t]") || peek("0\\.") || chars.index == chars.length) {
+                // all good
+            }
+            else {
+                throw new ParseException("invalid", chars.index);
+            }
+            if (match("0\\.")) isDecimal = true;
         }
-        // Standard
-        else if (peek("[0-9]")) {
-            while(match("[0-9]"));
+        // All Other Cases
+        if (match("[1-9]") || isDecimal) {
+            while (match("[0-9]"));
+            // Stopped at end or whitespace
+            if (peek("[ \\n\\r\\t]") || chars.index == chars.length) {
+                // all good!
+            }
+            else {
+                throw new ParseException("invalid", chars.index);
+            }
         }
-        // Invalid Input
-        else throw new ParseException("invalid", chars.index);
-        */
-
-
-
-        boolean isDecimal = false;
+        // No Valid Input
+        else {
+            throw new ParseException("invalid", chars.index);
+        }
+        /*
         match("-"); // Match an optional leading minus
         // Check for leading zero which could lead to a decimal
         if (match("0")) {
@@ -119,22 +135,14 @@ public final class Lexer {
             while (peek("[0-9]")) match("[0-9]");
             isDecimal = true; // Confirm it's a decimal after matching the fractional part
         }
-
+        */
+        // Emit the appropriate token type based on whether a decimal point was part of the number
         if (isDecimal) {
             return chars.emit(Token.Type.DECIMAL);
         } else {
             return chars.emit(Token.Type.INTEGER);
         }
     }
-
-
-    // Emit the appropriate token type based on whether a decimal point was part of the number
-
-
-
-
-
-
 
     public Token lexCharacter() {
         match("'");
@@ -148,7 +156,6 @@ public final class Lexer {
         }
         return chars.emit(Token.Type.CHARACTER);
     }
-
 
     public Token lexString() {
         match("\"");
@@ -166,15 +173,12 @@ public final class Lexer {
         return chars.emit(Token.Type.STRING);
     }
 
-
     public void lexEscape() {
         match("\\\\"); // Match the leading backslash of the escape sequence.
         if (!match("[bnrt'\"\\\\]")) { // Match valid escape characters.
             throw new ParseException("Invalid escape sequence", chars.index);
         }
     }
-
-
 
     public Token lexOperator() {
         // First, handle compound operators explicitly to ensure they are matched correctly
@@ -200,16 +204,11 @@ public final class Lexer {
         }
     }
 
-
-
-
     /**
      * Returns true if the next sequence of characters match the given patterns,
      * which should be a regex. For example, {@code peek("a", "b", "c")} would
      * return true if the next characters are {@code 'a', 'b', 'c'}.
      */
-
-
     public boolean peek(String... patterns) {
         for(int i=0; i<patterns.length; i++){
             if (!chars.has(i) || !String.valueOf(chars.get(i)).matches(patterns[i])){
