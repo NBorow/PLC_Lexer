@@ -28,22 +28,10 @@ public final class Lexer {
      */
     public List<Token> lex() {
         List<Token> tokens = new ArrayList<>();
-        int ind=-1;
-        while (chars.has(0)) {
-            if (peek( " ", "\\n", "\\r", "\\t")) {
-                System.out.println("FoundSpec");
-                match(" ", "\\n", "\\r", "\\t");
-            } else {
-                tokens.add(lexToken());
-                ind++;
-             // System.out.println(tokens.get(ind).toString());
-            }
+        while (chars.has( 0)) {
+            if (match( "[ \\n\\r\\t]")) chars.skip();
+            tokens.add(lexToken());
         }
-       /* for(int i=0;i<tokens.size();i++){
-            System.out.println(tokens.get(ind).toString());
-
-        }*/
-      //  System.out.println("Return Tokens");
         return tokens;
     }
 
@@ -57,44 +45,56 @@ public final class Lexer {
      */
     public Token lexToken() {
         if (peek("[a-zA-Z@]")) {
-           //System.out.println("FoundIdent");
             return lexIdentifier();
-        } else if (peek("[0-9]") || peek("-")) {
-           //System.out.println("FoundNum");
+        } else if (peek("[-0-9]")) {
             return lexNumber();
         } else if (peek("'")) {
-           // System.out.println("FoundChar");
             return lexCharacter();
         } else if (peek("\"")) {
-            //System.out.println("FoundString");
             return lexString();
         } else {
-           // System.out.println("FoundOp");
             return lexOperator();
         }
     }
 
-
     public Token lexIdentifier() {
         if (peek("@")) match("@");
         if (peek("[a-zA-Z]")) {
-            while (peek("[a-zA-Z0-9_-]")) {
-                match("[a-zA-Z0-9_-]");
-            }
+            while (match("[a-zA-Z0-9_-]"));
             return chars.emit(Token.Type.IDENTIFIER);
         }
         throw new ParseException("Expected identifier", chars.index);
     }
 
     public Token lexNumber() {
-        boolean isDecimal = false;
-        if (peek("-")) match("-"); // Match an optional leading minus
+        /*
+        // Int checking
+        // Negative Numbers
+        if (match("-")) {
+            if (match("[1-9]")) {
+                while (match("[0-9]"));
+            }
+            else throw new ParseException("invalid", chars.index);
+        }
+        // Leading Zeros
+        else if (match("0")) {
+            if(peek("[0-9]")) throw new ParseException("invalid", chars.index);
+        }
+        // Standard
+        else if (peek("[0-9]")) {
+            while(match("[0-9]"));
+        }
+        // Invalid Input
+        else throw new ParseException("invalid", chars.index);
+        */
 
+
+
+        boolean isDecimal = false;
+        match("-"); // Match an optional leading minus
         // Check for leading zero which could lead to a decimal
-        if (peek("0")) {
-            match("0");
-            if (peek("\\.")) { // It's a decimal if there's a dot following the zero
-                match("\\.");
+        if (match("0")) {
+            if (match("\\.")) { // It's a decimal if there's a dot following the zero
                 if (!peek("[0-9]")) {
                     throw new ParseException("Expected digit after decimal point", chars.index);
                 }
@@ -103,9 +103,8 @@ public final class Lexer {
                 // If there's another digit after 0, it's an error
                 throw new ParseException("Leading zeros are not allowed", chars.index);
             }
-        } else if (peek("[1-9]")) {
-            match("[1-9]");
-            while (peek("[0-9]")) match("[0-9]"); // Match the rest of any digits
+        } else if (match("[1-9]")) {
+            while (match("[0-9]")); // Match the rest of any digits
         } else {
             // No valid start for a number
             throw new ParseException("Expected digit", chars.index);
@@ -121,13 +120,11 @@ public final class Lexer {
             isDecimal = true; // Confirm it's a decimal after matching the fractional part
         }
 
-        if (isDecimal){
+        if (isDecimal) {
             return chars.emit(Token.Type.DECIMAL);
-
+        } else {
+            return chars.emit(Token.Type.INTEGER);
         }
-    else {return chars.emit(Token.Type.INTEGER);}
-
-
     }
 
 
@@ -214,10 +211,11 @@ public final class Lexer {
 
 
     public boolean peek(String... patterns) {
-        for(int i=0; i<patterns.length;i++){
+        for(int i=0; i<patterns.length; i++){
             if (!chars.has(i) || !String.valueOf(chars.get(i)).matches(patterns[i])){
                 return false;
             }
+            // System.out.println(chars.get(i));
         }
         return true;
     }
@@ -228,9 +226,9 @@ public final class Lexer {
      * true. Hint - it's easiest to have this method simply call peek.
      */
     public boolean match(String... patterns) {
-       boolean peek=peek(patterns);
+       boolean peek = peek(patterns);
        if (peek) {
-           for(int i=0;i<patterns.length;i++){
+           for(int i=0; i < patterns.length; i++){
                chars.advance();
            }
        }
