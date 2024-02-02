@@ -72,70 +72,44 @@ public final class Lexer {
         if (match("-")) {
             // Check if Negative Decimal or Non-zero
             // JAVA IS SHORT CIRCUITING MEANING THE REMAINING STATEMENTS WON'T EVALUATE IF THE PRECEDING IS/ARE TRUE
-            if (peek("0\\.") || peek("[1-9]") || chars.index == chars.length) {
+            if (peek("0\\.") || peek("[1-9]")) {
                 // all good!
             }
             else {
-                throw new ParseException("invalid", chars.index);
+                throw new ParseException("Expected Non-Zero Digit after Negative Sign.", chars.index);
             }
-            if (match("0\\.")) isDecimal = true;
+            if (match("0\\.")) {
+                if(!peek("[0-9]")) throw new ParseException("No Trailing Decimals", chars.index);
+                isDecimal = true;
+            }
         }
         // Leading Zeros
         else if (peek("0")) {
-            // Only char that can follow a 0 is a decimal [UNLESS IT'S JUST A ZERO]
-            if (peek("[ \\n\\r\\t]") || peek("0\\.") || chars.index == chars.length) {
-                // all good
+            // Only char that can follow a 0 is a decimal
+            if (match("0\\.")) {
+                if(!peek("[0-9]")) throw new ParseException("No Trailing Decimals", chars.index);
+                isDecimal = true;
             }
+            else if (peek("[0-9]")){
+                throw new ParseException("No Leading Zeros", chars.index);
+            }
+            // Just a 0, so emit
             else {
-                throw new ParseException("invalid", chars.index);
+                return chars.emit(Token.Type.INTEGER);
             }
-            if (match("0\\.")) isDecimal = true;
         }
         // All Other Cases
         if (match("[1-9]") || isDecimal) {
             while (match("[0-9]"));
-            // Stopped at end or whitespace
-            if (peek("[ \\n\\r\\t]") || chars.index == chars.length) {
-                // all good!
-            }
-            else {
-                throw new ParseException("invalid", chars.index);
+            if(match("\\.")) {
+                if(!peek("[0-9]")) throw new ParseException("No Trailing Decimals", chars.index);
+                isDecimal = true;
+                while(match("[0-9]"));
             }
         }
-        // No Valid Input
         else {
-            throw new ParseException("invalid", chars.index);
+            throw new ParseException("Expected Digit(s)", chars.index);
         }
-        /*
-        match("-"); // Match an optional leading minus
-        // Check for leading zero which could lead to a decimal
-        if (match("0")) {
-            if (match("\\.")) { // It's a decimal if there's a dot following the zero
-                if (!peek("[0-9]")) {
-                    throw new ParseException("Expected digit after decimal point", chars.index);
-                }
-                isDecimal = true; // Mark as decimal since we found a dot
-            } else if (peek("[0-9]")) {
-                // If there's another digit after 0, it's an error
-                throw new ParseException("Leading zeros are not allowed", chars.index);
-            }
-        } else if (match("[1-9]")) {
-            while (match("[0-9]")); // Match the rest of any digits
-        } else {
-            // No valid start for a number
-            throw new ParseException("Expected digit", chars.index);
-        }
-
-        // Handle the decimal part after ensuring the integer part is correct
-        if (peek("\\.")) {
-            match("\\.");
-            if (!peek("[0-9]")) {
-                throw new ParseException("Expected digit after decimal point", chars.index);
-            }
-            while (peek("[0-9]")) match("[0-9]");
-            isDecimal = true; // Confirm it's a decimal after matching the fractional part
-        }
-        */
         // Emit the appropriate token type based on whether a decimal point was part of the number
         if (isDecimal) {
             return chars.emit(Token.Type.DECIMAL);
