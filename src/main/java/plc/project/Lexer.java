@@ -30,7 +30,7 @@ public final class Lexer {
         List<Token> tokens = new ArrayList<>();
         while (chars.has( 0)) {
             if (match( "[ \\n\\r\\t]")) chars.skip();
-            tokens.add(lexToken());
+            else tokens.add(lexToken());
         }
         return tokens;
     }
@@ -155,26 +155,16 @@ public final class Lexer {
     }
 
     public Token lexOperator() {
-        // First, handle compound operators explicitly to ensure they are matched correctly
-        if (peek("!=") || peek("==")) {
-            if (peek("!=")) {
-                match("!=");
-            } else if (peek("==")) {
-                match("==");
-            }
+        // First, handle compound operators to ensure they are matched correctly
+        if(match("!") || match("=")) {
+            match("=");
             return chars.emit(Token.Type.OPERATOR);
-        }
-        // Include handling for semicolon and single character operators
-        if (peek("[;!=><+\\-*/%()]")) {
-            match("[;!=><+\\-*/%()]");
-            // Special handling for '=' to ensure it's not part of a compound operator missed earlier
-            if (peek("=")) {
-                // This should not happen due to the initial check for compound operators, but it's here for safety
-                match("=");
-            }
+        } else if (match("&&") || match("||")) {
             return chars.emit(Token.Type.OPERATOR);
         } else {
-            throw new ParseException("Expected operator", chars.index);
+            // Any Character (excluding whitespace)
+            match(".");
+            return chars.emit(Token.Type.OPERATOR);
         }
     }
 
@@ -188,7 +178,6 @@ public final class Lexer {
             if (!chars.has(i) || !String.valueOf(chars.get(i)).matches(patterns[i])){
                 return false;
             }
-            // System.out.println(chars.get(i));
         }
         return true;
     }
