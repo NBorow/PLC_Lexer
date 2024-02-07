@@ -28,22 +28,10 @@ public final class Lexer {
      */
     public List<Token> lex() {
         List<Token> tokens = new ArrayList<>();
-        int ind=-1;
-        while (chars.has(0)) {
-            if (peek( " ", "\\n", "\\r", "\\t")) {
-                System.out.println("FoundSpec");
-                match(" ", "\\n", "\\r", "\\t");
-            } else {
-                tokens.add(lexToken());
-                ind++;
-             // System.out.println(tokens.get(ind).toString());
-            }
+        while (chars.has( 0)) {
+            if (match( "[ \\n\\r\\t]")) chars.skip();
+            else tokens.add(lexToken());
         }
-       /* for(int i=0;i<tokens.size();i++){
-            System.out.println(tokens.get(ind).toString());
-
-        }*/
-      //  System.out.println("Return Tokens");
         return tokens;
     }
 
@@ -57,30 +45,22 @@ public final class Lexer {
      */
     public Token lexToken() {
         if (peek("[a-zA-Z@]")) {
-           //System.out.println("FoundIdent");
             return lexIdentifier();
-        } else if (peek("[0-9]") || peek("-")) {
-           //System.out.println("FoundNum");
+        } else if (peek("[-0-9]")) {
             return lexNumber();
         } else if (peek("'")) {
-           // System.out.println("FoundChar");
             return lexCharacter();
         } else if (peek("\"")) {
-            //System.out.println("FoundString");
             return lexString();
         } else {
-           // System.out.println("FoundOp");
             return lexOperator();
         }
     }
 
-
     public Token lexIdentifier() {
         if (peek("@")) match("@");
         if (peek("[a-zA-Z]")) {
-            while (peek("[a-zA-Z0-9_-]")) {
-                match("[a-zA-Z0-9_-]");
-            }
+            while (match("[a-zA-Z0-9_-]"));
             return chars.emit(Token.Type.IDENTIFIER);
         }
         throw new ParseException("Expected identifier", chars.index);
@@ -88,56 +68,55 @@ public final class Lexer {
 
     public Token lexNumber() {
         boolean isDecimal = false;
-        if (peek("-")) match("-"); // Match an optional leading minus
-
-        // Check for leading zero which could lead to a decimal
-        if (peek("0")) {
-            match("0");
-            if (peek("\\.")) { // It's a decimal if there's a dot following the zero
-                match("\\.");
-                if (!peek("[0-9]")) {
-                    throw new ParseException("Expected digit after decimal point", chars.index);
-                }
-                isDecimal = true; // Mark as decimal since we found a dot
-            } else if (peek("[0-9]")) {
-                // If there's another digit after 0, it's an error
-                throw new ParseException("Leading zeros are not allowed", chars.index);
+        // Negatives
+        if (match("-")) {
+            // Check if Negative Decimal or Non-zero
+            // JAVA IS SHORT CIRCUITING MEANING THE REMAINING STATEMENTS WON'T EVALUATE IF THE PRECEDING IS/ARE TRUE
+            if (peek("0\\.") || peek("[1-9]")) {
+                // all good!
             }
-        } else if (peek("[1-9]")) {
-            match("[1-9]");
-            while (peek("[0-9]")) match("[0-9]"); // Match the rest of any digits
-        } else {
-            // No valid start for a number
-            throw new ParseException("Expected digit", chars.index);
-        }
-
-        // Handle the decimal part after ensuring the integer part is correct
-        if (peek("\\.")) {
-            match("\\.");
-            if (!peek("[0-9]")) {
-                throw new ParseException("Expected digit after decimal point", chars.index);
+            else {
+                throw new ParseException("Expected Non-Zero Digit after Negative Sign.", chars.index);
             }
-            while (peek("[0-9]")) match("[0-9]");
-            isDecimal = true; // Confirm it's a decimal after matching the fractional part
+            if (match("0\\.")) {
+                if(!peek("[0-9]")) throw new ParseException("No Trailing Decimals", chars.index);
+                isDecimal = true;
+            }
         }
-
-        if (isDecimal){
+        // Leading Zeros
+        else if (peek("0")) {
+            // Only char that can follow a 0 is a decimal
+            if (match("0\\.")) {
+                if(!peek("[0-9]")) throw new ParseException("No Trailing Decimals", chars.index);
+                isDecimal = true;
+            }
+            else if (peek("[0-9]")){
+                throw new ParseException("No Leading Zeros", chars.index);
+            }
+            // Just a 0, so emit
+            else {
+                return chars.emit(Token.Type.INTEGER);
+            }
+        }
+        // All Other Cases
+        if (match("[1-9]") || isDecimal) {
+            while (match("[0-9]"));
+            if(match("\\.")) {
+                if(!peek("[0-9]")) throw new ParseException("No Trailing Decimals", chars.index);
+                isDecimal = true;
+                while(match("[0-9]"));
+            }
+        }
+        else {
+            throw new ParseException("Expected Digit(s)", chars.index);
+        }
+        // Emit the appropriate token type based on whether a decimal point was part of the number
+        if (isDecimal) {
             return chars.emit(Token.Type.DECIMAL);
-
+        } else {
+            return chars.emit(Token.Type.INTEGER);
         }
-    else {return chars.emit(Token.Type.INTEGER);}
-
-
     }
-
-
-    // Emit the appropriate token type based on whether a decimal point was part of the number
-
-
-
-
-
-
 
     public Token lexCharacter() {
         match("'");
@@ -151,7 +130,6 @@ public final class Lexer {
         }
         return chars.emit(Token.Type.CHARACTER);
     }
-
 
     public Token lexString() {
         match("\"");
@@ -169,7 +147,6 @@ public final class Lexer {
         return chars.emit(Token.Type.STRING);
     }
 
-
     public void lexEscape() {
         match("\\\\"); // Match the leading backslash of the escape sequence.
         if (!match("[bnrt'\"\\\\]")) { // Match valid escape characters.
@@ -177,44 +154,25 @@ public final class Lexer {
         }
     }
 
-
-
     public Token lexOperator() {
-        // First, handle compound operators explicitly to ensure they are matched correctly
-        if (peek("!=") || peek("==")) {
-            if (peek("!=")) {
-                match("!=");
-            } else if (peek("==")) {
-                match("==");
-            }
-            return chars.emit(Token.Type.OPERATOR);
-        }
-        // Include handling for semicolon and single character operators
-        if (peek("[;!=><+\\-*/%()]")) {
-            match("[;!=><+\\-*/%()]");
-            // Special handling for '=' to ensure it's not part of a compound operator missed earlier
-            if (peek("=")) {
-                // This should not happen due to the initial check for compound operators, but it's here for safety
-                match("=");
-            }
-            return chars.emit(Token.Type.OPERATOR);
+        // First, handle compound operators to ensure they are matched correctly
+        if(match("!") || match("=")) {
+            match("=");
+        } else if (match("&&") || match("||")) {
         } else {
-            throw new ParseException("Expected operator", chars.index);
+            // Any Character (excluding whitespace)
+            match(".");
         }
+        return chars.emit(Token.Type.OPERATOR);
     }
-
-
-
 
     /**
      * Returns true if the next sequence of characters match the given patterns,
      * which should be a regex. For example, {@code peek("a", "b", "c")} would
      * return true if the next characters are {@code 'a', 'b', 'c'}.
      */
-
-
     public boolean peek(String... patterns) {
-        for(int i=0; i<patterns.length;i++){
+        for(int i=0; i<patterns.length; i++){
             if (!chars.has(i) || !String.valueOf(chars.get(i)).matches(patterns[i])){
                 return false;
             }
@@ -228,9 +186,9 @@ public final class Lexer {
      * true. Hint - it's easiest to have this method simply call peek.
      */
     public boolean match(String... patterns) {
-       boolean peek=peek(patterns);
+       boolean peek = peek(patterns);
        if (peek) {
-           for(int i=0;i<patterns.length;i++){
+           for(int i=0; i < patterns.length; i++){
                chars.advance();
            }
        }
