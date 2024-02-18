@@ -39,7 +39,8 @@ public class LexerTests {
                 Arguments.of("Multiple Digits", "12345", true),
                 Arguments.of("Negative", "-1", true),
                 Arguments.of("Leading Zero", "01", false),
-                Arguments.of("Negative Zero", "-0", false)
+                Arguments.of("Negative Zero", "-0", false),
+                Arguments.of("Just Zero", "0", true)
         );
     }
 
@@ -55,7 +56,7 @@ public class LexerTests {
                 Arguments.of("Negative Decimal", "-1.0", true),
                 Arguments.of("Trailing Decimal", "1.", false),
                 Arguments.of("Leading Decimal", ".5", false),
-                Arguments.of("Negative Zero", "-0.0", false)
+                Arguments.of("Zero Trailing Decimal", "-0.", false)
         );
     }
 
@@ -69,6 +70,7 @@ public class LexerTests {
         return Stream.of(
                 Arguments.of("Alphabetic", "\'c\'", true),
                 Arguments.of("Newline Escape", "\'\\n\'", true),
+                Arguments.of("Single Quote", "\'\'\'", false),
                 Arguments.of("Empty", "\'\'", false),
                 Arguments.of("Multiple", "\'abc\'", false)
         );
@@ -86,7 +88,8 @@ public class LexerTests {
                 Arguments.of("Alphabetic", "\"abc\"", true),
                 Arguments.of("Newline Escape", "\"Hello,\\nWorld\"", true),
                 Arguments.of("Unterminated", "\"unterminated", false),
-                Arguments.of("Invalid Escape", "\"invalid\\escape\"", false)
+                Arguments.of("Invalid Escape", "\"invalid\\escape\"", false),
+                Arguments.of("Unterminated w/ Newline", "\"Hello\n", true)
         );
     }
 
@@ -102,7 +105,11 @@ public class LexerTests {
                 Arguments.of("Character", "(", true),
                 Arguments.of("Comparison", "!=", true),
                 Arguments.of("Space", " ", false),
-                Arguments.of("Tab", "\t", false)
+                Arguments.of("Tab", "\t", false),
+                Arguments.of("Symbol", "$", true),
+                Arguments.of("Plus Sign", "+", true),
+                Arguments.of("Hyphen", "-", true),
+                Arguments.of("Decimal", ".", true)
         );
     }
 
@@ -127,6 +134,35 @@ public class LexerTests {
                         new Token(Token.Type.STRING, "\"Hello, World!\"", 6),
                         new Token(Token.Type.OPERATOR, ")", 21),
                         new Token(Token.Type.OPERATOR, ";", 22)
+                )),
+                Arguments.of("Example 3", "5.toString();", Arrays.asList(
+                        new Token(Token.Type.INTEGER, "5", 0),
+                        new Token(Token.Type.OPERATOR, ".", 1),
+                        new Token(Token.Type.IDENTIFIER, "toString", 2),
+                        new Token(Token.Type.OPERATOR, "(", 10),
+                        new Token(Token.Type.OPERATOR, ")", 11),
+                        new Token(Token.Type.OPERATOR, ";", 12)
+                )),
+                Arguments.of("Example 4", "-0-   two.five 6.7  8.00.1", Arrays.asList(
+                        new Token(Token.Type.OPERATOR, "-", 0),
+                        new Token(Token.Type.INTEGER, "0", 1),
+                        new Token(Token.Type.OPERATOR, "-", 2),
+                        new Token(Token.Type.IDENTIFIER, "two", 6),
+                        new Token(Token.Type.OPERATOR, ".", 9),
+                        new Token(Token.Type.IDENTIFIER, "five", 10),
+                        new Token(Token.Type.DECIMAL, "6.7", 15),
+                        new Token(Token.Type.DECIMAL, "8.00", 20),
+                        new Token(Token.Type.OPERATOR, ".", 24),
+                        new Token(Token.Type.INTEGER, "1", 25)
+                )),
+                Arguments.of("Example 4", "0 00 -0.0 0.0 0.", Arrays.asList(
+                        new Token(Token.Type.INTEGER, "0", 0),
+                        new Token(Token.Type.INTEGER, "0", 2),
+                        new Token(Token.Type.INTEGER, "0", 3),
+                        new Token(Token.Type.DECIMAL, "-0.0", 5),
+                        new Token(Token.Type.DECIMAL, "0.0", 10),
+                        new Token(Token.Type.INTEGER, "0", 14),
+                        new Token(Token.Type.OPERATOR, ".", 15)
                 ))
         );
     }
