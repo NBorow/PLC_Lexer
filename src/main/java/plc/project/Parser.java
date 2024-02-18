@@ -107,19 +107,25 @@ public final class Parser {
                     match(",");
                 }
             }
-            match(")"); // Ensure closing parenthesis
-            if (match(";")) {
+            if(peek(")")){
+                match(")");
+            }
+            else{throw new ParseException("Expected closing ')'", tokens.get(0).getIndex());}
+            // Ensure closing parenthesis
+            if (peek(";")) {
+                match(";");
                 // If there's a semicolon, it's a complete expression statement
                 return new Ast.Statement.Expression(new Ast.Expression.Function(name, arguments));
             } else {
                 throw new ParseException("Expected ';'", tokens.get(0).getIndex());
             }
         } else {
-            if (match("=")) {
+            if (peek("=")) {
+                match("=");
                 // It's an assignment
                 Ast.Expression value = parseExpression(); // Parse the value to be assigned
 
-                if (!match(";")) {
+                if (!peek(";")) {
                     throw new ParseException("Expected ';' after expression", tokens.get(0).getIndex());
                 }
 
@@ -152,13 +158,14 @@ public final class Parser {
 
         // Optional initialization expression
         Optional<Ast.Expression> initializer = Optional.empty();
-        if (match("=")) {
+        if (peek("=")) {
+            match("=");
             // If there's an '=', parse the following expression as the initializer
             initializer = Optional.of(parseExpression());
         }
 
         // Ensure the statement ends with a semicolon
-        if (!match(";")) {
+        if (!peek(";")) {
             throw new ParseException("Expected ';'", tokens.get(0).getIndex());
         }
 
@@ -305,13 +312,16 @@ public final class Parser {
             return new Ast.Expression.Literal(processStringLiteral(value));
         } else if (peek(Token.Type.IDENTIFIER)) {
             String name = tokens.get(0).getLiteral();
-            if (name.equals("TRUE")) {
+
+            if (peek("TRUE")) {
+                match("TRUE");
                 return new Ast.Expression.Literal(true);
-            } else if (name.equals("FALSE")) {
-                return new Ast.Expression.Literal(false);
-            } else if (name.equals("NIL")) {
-                return new Ast.Expression.Literal(null);
-            }
+            } else if(peek("FALSE")) {
+            match("FALSE");
+                return new Ast.Expression.Literal(false);}
+             else if (peek("NIL")) {
+                match("NIL");
+                return new Ast.Expression.Literal(null);}
 
             match(Token.Type.IDENTIFIER);
             if (peek("(")) {
@@ -323,8 +333,11 @@ public final class Parser {
                         match(",");
                     }
                 }
+                if(peek(")")){
                 match(")");
-                return new Ast.Expression.Function(name, arguments); //parse exception missing )?
+                return new Ast.Expression.Function(name, arguments);} //parse exception missing )}
+                     else{throw new ParseException("Expected closing ')'", tokens.get(0).getIndex());}
+
             }else if (peek("[")) {
                     match("[");
                     Ast.Expression index = parseExpression(); // This captures the index expression
@@ -338,7 +351,7 @@ public final class Parser {
         } else if (peek("(")) {
             match("(");
             Ast.Expression expression = parseExpression();
-            if (!match(")")) {
+            if (!peek(")")) {
                 throw new ParseException("Expected ')'", tokens.get(0).getIndex());
             }
             return new Ast.Expression.Group(expression); // Wrap the expression in a Group
