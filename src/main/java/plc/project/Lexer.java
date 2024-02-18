@@ -72,28 +72,26 @@ public final class Lexer {
         if (match("-")) {
             // Check if Negative Decimal or Non-zero
             // JAVA IS SHORT CIRCUITING MEANING THE REMAINING STATEMENTS WON'T EVALUATE IF THE PRECEDING IS/ARE TRUE
-            if (peek("0\\.") || peek("[1-9]")) {
+            if (peek("[1-9]")) {
                 // all good!
             }
-            else {
-                throw new ParseException("Expected Non-Zero Digit after Negative Sign.", chars.index);
-            }
-            if (match("0\\.")) {
-                if(!peek("[0-9]")) throw new ParseException("No Trailing Decimals", chars.index);
+            else if (peek("0", "\\.", "[0-9]")) {
+                match("0", "\\.");
                 isDecimal = true;
+            }
+            // Just a Hyphen!
+            else {
+                return chars.emit(Token.Type.OPERATOR);
             }
         }
         // Leading Zeros
-        else if (peek("0")) {
+        else if (match("0")) {
             // Only char that can follow a 0 is a decimal
-            if (match("0\\.")) {
-                if(!peek("[0-9]")) throw new ParseException("No Trailing Decimals", chars.index);
+            if (peek("\\.", "[0-9]")) {
+                match("\\.");
                 isDecimal = true;
             }
-            else if (peek("[0-9]")){
-                throw new ParseException("No Leading Zeros", chars.index);
-            }
-            // Just a 0, so emit
+            // Either leading zero or just zero, so emit
             else {
                 return chars.emit(Token.Type.INTEGER);
             }
@@ -101,8 +99,11 @@ public final class Lexer {
         // All Other Cases
         if (match("[1-9]") || isDecimal) {
             while (match("[0-9]"));
-            if(match("\\.")) {
-                if(!peek("[0-9]")) throw new ParseException("No Trailing Decimals", chars.index);
+            if (peek("\\.", "[0-9]")) {
+                if (isDecimal) {
+                    return chars.emit(Token.Type.DECIMAL);
+                }
+                match("\\.");
                 isDecimal = true;
                 while(match("[0-9]"));
             }
