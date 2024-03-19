@@ -586,7 +586,15 @@ else{
 
                         }
                     } else {
-                        return new Ast.Statement.If(expr, bloc, bloc2);
+                        if (peek("END")) {
+                            match("END");
+                            return new Ast.Statement.If(expr, bloc, bloc2);
+                        } else {
+                            if(tokens.has(0)){
+                                throw new ParseException("Expected END", tokens.get(0).getIndex());
+                            }
+                            else  throw new ParseException("Expected END", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
+                        }
                     }
                 } else {
                     if(tokens.has(0)){
@@ -638,7 +646,20 @@ else{
             }
             else  throw new ParseException("Expected DEFAULT Case", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
         }
-      return new Ast.Statement.Switch(expr,Cases);
+
+        if (peek("END")) {
+            match("END");
+
+            return new Ast.Statement.Switch(expr,Cases);
+
+
+        } else {
+            if(tokens.has(0)){
+                throw new ParseException("Expected END", tokens.get(0).getIndex());
+            }
+            else  throw new ParseException("Expected END", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
+        }
+
     }
 
     /**
