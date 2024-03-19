@@ -119,19 +119,51 @@ public final class Parser {
                    match("=");
                    if(peek("[")){
                        match("[");
-                   if(peek("NIL") || peek("LET") || peek("SWITCH") || peek("IF") || peek("WHILE") || peek("RETURN") || peek("TRUE") || peek("FALSE") || peek(Token.Type.INTEGER) || peek(Token.Type.DECIMAL) || peek(Token.Type.CHARACTER) || peek(Token.Type.STRING) || peek("(") || peek(Token.Type.IDENTIFIER)){
+                       ///////////////////////////////////
+                       if(peek("LIST")||peek("VAR")||peek("VAL")||peek("FUN")||peek("LET")||peek("SWITCH")||peek("CASE")||peek("DEFAULT")||peek("END")||peek("IF")||peek("DO")||peek("ELSE")||peek("WHILE")||peek("RETURN") ){
+                           if(tokens.has(0)){
+                               throw new ParseException("Expected Nonkeyword Expression", tokens.get(0).getIndex());
+                           }
+                           else  throw new ParseException("Expected Nonkeyword Expression", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
+
+                       }//keyword
+
+                   if(peek("NIL") || peek("TRUE") || peek("FALSE") || peek(Token.Type.INTEGER) || peek(Token.Type.DECIMAL) || peek(Token.Type.CHARACTER) || peek(Token.Type.STRING) || peek("(") || peek(Token.Type.IDENTIFIER)){
+
                        List<Ast.Expression> firstlist= new ArrayList<>();
                        Ast.Expression expr=parseExpression();
                        firstlist.add(expr);
-                       while (!peek("]")) {
-                          firstlist.add(parseExpression());
-                           if (peek(",")) {
+                       if (peek(",")) {
+
+                           while (peek(",")) {
                                match(",");
-                               if(peek("]")){
+                               if (peek("]")) {
                                    throw new ParseException("Trailing Comma In GLOBAL LIST", tokens.get(0).getIndex());
                                }
+                               if(peek("LIST")||peek("VAR")||peek("VAL")||peek("FUN")||peek("LET")||peek("SWITCH")||peek("CASE")||peek("DEFAULT")||peek("END")||peek("IF")||peek("DO")||peek("ELSE")||peek("WHILE")||peek("RETURN") ){
+                                   if(tokens.has(0)){
+                                       throw new ParseException("Expected Nonkeyword Expression", tokens.get(0).getIndex());
+                                   }
+                                   else  throw new ParseException("Expected Nonkeyword Expression", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
+
+                               }//keyword
+
+                               if(peek("NIL") || peek("TRUE") || peek("FALSE") || peek(Token.Type.INTEGER) || peek(Token.Type.DECIMAL) || peek(Token.Type.CHARACTER) || peek(Token.Type.STRING) || peek("(") || peek(Token.Type.IDENTIFIER)) {
+
+                                   firstlist.add(parseExpression());
+
+                               }
+                               else{
+                                   if(tokens.has(0)){
+                                       throw new ParseException("Expected  Expression", tokens.get(0).getIndex());
+                                   }
+                                   else  throw new ParseException("Expected  Expression", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
+
+                               }
                            }
+
                        }
+
                        if(peek("]")){
                            match("]");
                            Ast.Expression.PlcList seclist=new Ast.Expression.PlcList(firstlist);
@@ -142,12 +174,14 @@ public final class Parser {
                            }
                            else  throw new ParseException("Expected ]", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
                        }
-                   }else{
+                   }
+                   //////////////////////////////////////////
+                   else{
                        if(tokens.has(0)){
-                           throw new ParseException("Expected Expresison", tokens.get(0).getIndex());
+                           throw new ParseException("Expected Expression", tokens.get(0).getIndex());
                        }
                        else  throw new ParseException("Expected Expression", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
-                       }
+                       }/////////////////////////////////////
                    }else{
                        if(tokens.has(0)){
                            throw new ParseException("Expected [", tokens.get(0).getIndex());
@@ -586,7 +620,15 @@ else{
 
                         }
                     } else {
-                        return new Ast.Statement.If(expr, bloc, bloc2);
+                        if (peek("END")) {
+                            match("END");
+                            return new Ast.Statement.If(expr, bloc, bloc2);
+                        } else {
+                            if(tokens.has(0)){
+                                throw new ParseException("Expected END", tokens.get(0).getIndex());
+                            }
+                            else  throw new ParseException("Expected END", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
+                        }
                     }
                 } else {
                     if(tokens.has(0)){
@@ -638,7 +680,20 @@ else{
             }
             else  throw new ParseException("Expected DEFAULT Case", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
         }
-      return new Ast.Statement.Switch(expr,Cases);
+
+        if (peek("END")) {
+            match("END");
+
+            return new Ast.Statement.Switch(expr,Cases);
+
+
+        } else {
+            if(tokens.has(0)){
+                throw new ParseException("Expected END", tokens.get(0).getIndex());
+            }
+            else  throw new ParseException("Expected END", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
+        }
+
     }
 
     /**
