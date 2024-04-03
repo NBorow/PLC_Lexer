@@ -68,32 +68,31 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
     // ^^evaluating square(10) returns 100
     @Override
     public Environment.PlcObject visit(Ast.Function ast) {
-        String name = ast.getName();
-        int arity = ast.getParameters().size();
-        // new Ast.Statement.Return(new Ast.Expression.Literal(BigInteger.ZERO))
-        scope.defineFunction(name, arity, args -> {
-            try {
-                scope = new Scope(scope);   // Defining new scope for function
 
-                List<String> names = ast.getParameters();
-                for (int i = 0; i < arity; ++i) {
-                    scope.defineVariable(names.get(i), true,
-                            Environment.create(args.get(i).getValue()));    // Defining Variables with Parameter Names and Passed Values
-                }
 
-                List<Ast.Statement> statements = ast.getStatements();
-                Ast.Statement s;
-                for (int i = 0; i < statements.size(); ++i) {
-                    visit(statements.get(i));   // Evaluating Function Statements
+            Scope definingScope = this.scope; // Capture the current scope as the defining scope of the function.
+
+            // Define the function with a lambda that uses the captured defining scope.
+            scope.defineFunction(ast.getName(), ast.getParameters().size(), args -> {
+                Scope previousScope = this.scope; // Save the current execution scope.
+                this.scope = new Scope(definingScope); // Switch to a new scope based on the defining scope.
+                try {
+                    // Define parameters in the new scope based on the defining scope.
+                    for (int i = 0; i < ast.getParameters().size(); i++) {
+                        this.scope.defineVariable(ast.getParameters().get(i), true, args.get(i));
+                    }
+                    // Execute the function body.
+                    for (Ast.Statement statement : ast.getStatements()) {
+                        visit(statement);
+                    }
+                } catch (Return e) {
+                    return e.value; // Return Lambda Function
+                } finally {
+                    this.scope = previousScope; // Restore the previous execution scope.
                 }
-            } catch (Return e) {
-                return e.value; // Return Lambda Function
-            } finally {
-                scope = scope.getParent();  // Update Scope before Exiting
-            }
-            return Environment.NIL; // shouldn't reach this statement, here for syntax reasons
-        });
-        return Environment.NIL; // This Function always returns NIL
+                return Environment.NIL; // Default return if no explicit RETURN statement is encountered.
+            });
+            return Environment.NIL; // Function definition does not produce a runtime value.
     }
 
     // Evaluates the expression => Returns NIL
@@ -172,15 +171,22 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
     // Returns NIL
     @Override
     public Environment.PlcObject visit(Ast.Statement.If ast) {
+
         Environment.PlcObject condition = visit(ast.getCondition());
         Boolean conditionValue = requireType(Boolean.class, condition);
+        try {
+            scope = new Scope(scope);   // Defining new scope for function
+            if (conditionValue) {
+                ast.getThenStatements().forEach(this::visit);
+            } else {
+                ast.getElseStatements().forEach(this::visit);
+            }
 
-        if (conditionValue) {
-            ast.getThenStatements().forEach(this::visit);
-        } else {
-            ast.getElseStatements().forEach(this::visit);
         }
 
+        finally {
+            scope = scope.getParent();  // Update Scope before Exiting
+        }
         return Environment.NIL;
     }
 
@@ -190,36 +196,43 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
     // Returns NIL
     @Override
     public Environment.PlcObject visit(Ast.Statement.Switch ast) {
+
         Environment.PlcObject conditionValue = visit(ast.getCondition());
         boolean matched = false;
 
-        for (Ast.Statement.Case caseStmt : ast.getCases()) {
-            // If we've already matched, break out of the loop to prevent executing more than one case
-            if (matched) {
-                break;
-            }
+        try {
+            scope = new Scope(scope);   // Defining new scope for function
+            for (Ast.Statement.Case caseStmt : ast.getCases()) {
+                // If we've already matched, break out of the loop to prevent executing more than one case
+                if (matched) {
+                    break;
+                }
 
-            if (caseStmt.getValue().isPresent()) {
-                Environment.PlcObject caseValue = visit(caseStmt.getValue().get());
+                if (caseStmt.getValue().isPresent()) {
+                    Environment.PlcObject caseValue = visit(caseStmt.getValue().get());
 
-                // Compare the actual values of the condition and the case
-                if (Objects.equals(conditionValue.getValue(), caseValue.getValue())) {
-                    matched = true;
-                    for (Ast.Statement statement : caseStmt.getStatements()) {
-                        visit(statement);
+                    // Compare the actual values of the condition and the case
+                    if (Objects.equals(conditionValue.getValue(), caseValue.getValue())) {
+                        matched = true;
+                        for (Ast.Statement statement : caseStmt.getStatements()) {
+                            visit(statement);
+                        }
+                    }
+                } else {
+                    // This is a default case. Execute it only if no other case matched.
+                    if (!matched) {
+                        for (Ast.Statement statement : caseStmt.getStatements()) {
+                            visit(statement);
+                        }
+                        matched = true; // Ensure the default case is executed only once
                     }
                 }
-            } else {
-                // This is a default case. Execute it only if no other case matched.
-                if (!matched) {
-                    for (Ast.Statement statement : caseStmt.getStatements()) {
-                        visit(statement);
-                    }
-                    matched = true; // Ensure the default case is executed only once
-                }
             }
+
         }
-
+        finally {
+            scope = scope.getParent();  // Update Scope before Exiting
+        }
         return Environment.NIL;
     }
 
@@ -397,6 +410,7 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
         // If there's no offset, simply return the variable's value
         if (!ast.getOffset().isPresent()) {
+           // System.out.println(variable.getValue());;
             return variable.getValue();
         } else {
             // If there's an offset, it's a list access. First, ensure the variable's value is a List
@@ -423,6 +437,7 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
         Environment.Function function = scope.lookupFunction(ast.getName(), ast.getArguments().size());
         List<Environment.PlcObject> arguments = new ArrayList<>();
         for(Ast.Expression e : ast.getArguments()) {
+        //    System.out.println(e);
             arguments.add(visit(e));   // Converting each expression to a PlcObject to pass to function
         }
         return function.invoke(arguments);
