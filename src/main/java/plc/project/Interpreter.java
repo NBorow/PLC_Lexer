@@ -332,11 +332,11 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
                 return Environment.create(comparisonResultmore > 0);
             case "==":
                 rhs = visit(ast.getRight());
-                if(lhs.getValue().equals(rhs.getValue())) return Environment.create(Boolean.TRUE);    // 5 == 5
+                if(lhs.equals(rhs)) return Environment.create(Boolean.TRUE);    // 5 == 5
                 return Environment.create(Boolean.FALSE);   // 5 == 3
             case "!=":
                 rhs = visit(ast.getRight());
-                if(lhs.getValue().equals(rhs.getValue())) return Environment.create(Boolean.FALSE);   // 5 != 5
+                if(lhs.equals(rhs)) return Environment.create(Boolean.FALSE);   // 5 != 5
                 return Environment.create(Boolean.TRUE);    // 5 != 3
             case "+":
                 rhs = visit(ast.getRight());
@@ -372,12 +372,16 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
                 return Environment.create(Ret);
             case "^":
                 rhs = visit(ast.getRight());
-                requireType(BigInteger.class, lhs); // Has to be BigInteger
-                requireType(lhs.getValue().getClass(), rhs);
-                // The value of a BigInteger might be larger than the range of an Integer
-                // , requiring you to perform calculations yourself
-                Ret = (BigInteger) ((BigInteger)lhs.getValue()).pow((int) rhs.getValue());
-                return Environment.create(Ret);
+                // Ensure LHS is of type BigInteger for the operation
+                BigInteger lhsValue = requireType(BigInteger.class, lhs);
+                // Convert RHS to an integer value for the exponent. This step was causing the exception.
+                int exponent;
+                try {
+                    exponent = requireType(BigInteger.class, rhs).intValueExact();
+                } catch (ArithmeticException e) {
+                    throw new RuntimeException("Exponent is too large for an integer", e);
+                }
+                return Environment.create(lhsValue.pow(exponent));
             default:
                 throw new RuntimeException("Invalid Binary Operator.");
         }
