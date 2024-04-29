@@ -3,7 +3,10 @@ package plc.project;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
@@ -29,14 +32,18 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
     // If a function does not exist within source, the evaluation fails
     @Override
     public Environment.PlcObject visit(Ast.Source ast) {
-        Environment.PlcObject ret = Environment.NIL;    // Default Case
-        ast.getGlobals().forEach(this::visit);  // Evaluate Globals
-        for(Ast.Function f : ast.getFunctions()) {  // Evaluate Functions
-            ret = visit(f); // ISSUE: FUNCTION PASSES NOTHING TO args SO FUNCTION ISN'T DEFINED => NO EVALUATION/RETURN
+        ast.getGlobals().forEach(this::visit);
+        ast.getFunctions().forEach(this::visit);
+
+        Environment.Function mainFunction = scope.lookupFunction("main", 0);
+        if (mainFunction != null) {
+            return mainFunction.invoke(List.of()); // Call main with no arguments
         }
-        scope.lookupFunction("main", 0);    // Fail if no main
-        return ret; // Default Case
+
+        return Environment.NIL; // If no main function or other return condition is specified
     }
+
+
 
     // Defines a variable in the current scope
     // Assign value as NIL if no initial value is defined/required
@@ -63,8 +70,8 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
     public Environment.PlcObject visit(Ast.Function ast) {
         String name = ast.getName();
         int arity = ast.getParameters().size();
-        // testSource and testMain pass the same exact function, but one fails and one doesn't. WTF
-        scope.defineFunction(name, arity, args -> { // ERROR WITH NO ARGS PASSED SO LAMBDA ISN'T ENTERED
+        // new Ast.Statement.Return(new Ast.Expression.Literal(BigInteger.ZERO))
+        scope.defineFunction(name, arity, args -> {
             try {
                 scope = new Scope(scope);   // Defining new scope for function
 
@@ -103,7 +110,15 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
     // LET name = 1;, scope={} => NIL, scope={name=1}
     @Override
     public Environment.PlcObject visit(Ast.Statement.Declaration ast) {
-        throw new UnsupportedOperationException(); //TODO (in lecture)
+        Optional optional=ast.getValue();
+        Boolean present=optional.isPresent();
+        if(present){
+            Ast.Expression expr=(Ast.Expression) optional.get();
+            scope.defineVariable(ast.getName(),true,visit(expr));
+        }else{
+            scope.defineVariable(ast.getName(),true,Environment.NIL);
+        }
+        return Environment.NIL;
     }
 
     // VERIFY RECEIVER IS AN Ast.Expression.Access
@@ -115,8 +130,40 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
     // variable = 1;, scope={variable="variable"} => NIL, scope={variable = 1}
     @Override
     public Environment.PlcObject visit(Ast.Statement.Assignment ast) {
-        return Environment.NIL; // TODO
+        if (!(ast.getReceiver() instanceof Ast.Expression.Access)) {
+            throw new RuntimeException("The left-hand side of an assignment must be a variable access.");
+        }
+
+        Ast.Expression.Access access = (Ast.Expression.Access) ast.getReceiver();
+        Environment.Variable variable = scope.lookupVariable(access.getName());
+
+        // Directly evaluate the right-hand side (value) of the assignment.
+        Environment.PlcObject value = visit(ast.getValue());
+
+        if (!variable.getMutable()) {
+            throw new RuntimeException("Cannot assign to an immutable variable: " + access.getName());
+        }
+
+        if (access.getOffset().isPresent()) {
+            // Handling list assignmen variable.
+            List<Object>list=requireType(List.class, variable.getValue());
+            // Evaluate the offset to get the index for list access
+            int index = requireType(BigInteger.class, visit(access.getOffset().get())).intValue();
+
+            // Ensure the index is within the list bounds
+            if (index < 0 || index >= list.size()) {
+                throw new RuntimeException("List index out of bounds: " + index);
+            }
+            list.set(index,value.getValue());
+        } else {
+            // Regular variable assignment
+            variable.setValue(value);
+        }
+
+        return Environment.NIL; // The assignment itself does not produce a value.
     }
+
+
 
     // Ensure the condition evaluates to a Boolean [requireType]
     // otherwise... FAIL
@@ -125,22 +172,68 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
     // Returns NIL
     @Override
     public Environment.PlcObject visit(Ast.Statement.If ast) {
-        return Environment.NIL; // TODO
+        Environment.PlcObject condition = visit(ast.getCondition());
+        Boolean conditionValue = requireType(Boolean.class, condition);
+
+        if (conditionValue) {
+            ast.getThenStatements().forEach(this::visit);
+        } else {
+            ast.getElseStatements().forEach(this::visit);
+        }
+
+        return Environment.NIL;
     }
+
 
     // Inside of a new scope, if the condition is equivalent to a CASE value, evaluate the corresponding statements
     // Otherwise evaluate the statements of the DEFAULT
     // Returns NIL
     @Override
     public Environment.PlcObject visit(Ast.Statement.Switch ast) {
-        return Environment.NIL; // TODO
+        Environment.PlcObject conditionValue = visit(ast.getCondition());
+        boolean matched = false;
+
+        for (Ast.Statement.Case caseStmt : ast.getCases()) {
+            // If we've already matched, break out of the loop to prevent executing more than one case
+            if (matched) {
+                break;
+            }
+
+            if (caseStmt.getValue().isPresent()) {
+                Environment.PlcObject caseValue = visit(caseStmt.getValue().get());
+
+                // Compare the actual values of the condition and the case
+                if (Objects.equals(conditionValue.getValue(), caseValue.getValue())) {
+                    matched = true;
+                    for (Ast.Statement statement : caseStmt.getStatements()) {
+                        visit(statement);
+                    }
+                }
+            } else {
+                // This is a default case. Execute it only if no other case matched.
+                if (!matched) {
+                    for (Ast.Statement statement : caseStmt.getStatements()) {
+                        visit(statement);
+                    }
+                    matched = true; // Ensure the default case is executed only once
+                }
+            }
+        }
+
+        return Environment.NIL;
     }
 
+
+
+
     // yeah
-    @Override
     public Environment.PlcObject visit(Ast.Statement.Case ast) {
-        return Environment.NIL; // TODO
+        for (Ast.Statement statement : ast.getStatements()) {
+            visit(statement);
+        }
+        return Environment.NIL;
     }
+
 
     // Ensure the condition evaluates to a Boolean [requireType]
     // otherwise... FAIL
@@ -149,7 +242,16 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
     // Returns NIL
     @Override
     public Environment.PlcObject visit(Ast.Statement.While ast) {
-        throw new UnsupportedOperationException(); //TODO (in lecture)
+        while(requireType(Boolean.class,visit(ast.getCondition()))) {
+            try {
+                scope = new Scope(scope);
+                ast.getStatements().forEach(this::visit);
+            } finally {
+                scope = scope.getParent();
+
+            }
+        }
+       return Environment.NIL;
     }
 
     // Evaluates the value and throws it inside a Return exception
@@ -174,8 +276,10 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
     // (1) => 1, (1 + 10) => 11
     @Override
     public Environment.PlcObject visit(Ast.Expression.Group ast) {
-        return Environment.NIL; // TODO
+        // Simply evaluate the expression contained within the group and return its result.
+        return visit(ast.getExpression());
     }
+
 
     // Check assignment doc (the big one)
     // Evaluates arguments based on the specific binary operator, returning the appropriate result for the operation
@@ -208,18 +312,31 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
                 if(rhs.getValue().equals(Boolean.TRUE)) return Environment.create(Boolean.TRUE);    // F || T
                 return Environment.create(Boolean.FALSE);   // F && F
             case "<":
-                rhs = visit(ast.getRight());    // *****IMPLEMENT*****
-                break;
+                rhs = visit(ast.getRight());
+                if (!lhs.getValue().getClass().equals(rhs.getValue().getClass()) ||
+                        !(lhs.getValue() instanceof Comparable) ||
+                        !(rhs.getValue() instanceof Comparable)) {
+                    throw new RuntimeException("Operands for '" + operator + "' operator must be of the same comparable type.");
+                }
+                int comparisonResultless = ((Comparable) lhs.getValue()).compareTo(rhs.getValue());
+                return Environment.create(comparisonResultless< 0);
             case ">":
-                rhs = visit(ast.getRight());    // *****IMPLEMENT*****
-                break;
+                // Check if both lhs and rhs are instances of the same class and are Comparable
+                rhs = visit(ast.getRight());
+                if (!lhs.getValue().getClass().equals(rhs.getValue().getClass()) ||
+                        !(lhs.getValue() instanceof Comparable) ||
+                        !(rhs.getValue() instanceof Comparable)) {
+                    throw new RuntimeException("Operands for '" + operator + "' operator must be of the same comparable type.");
+                }
+                int comparisonResultmore = ((Comparable) lhs.getValue()).compareTo(rhs.getValue());
+                return Environment.create(comparisonResultmore > 0);
             case "==":
                 rhs = visit(ast.getRight());
-                if(lhs.equals(rhs)) return Environment.create(Boolean.TRUE);    // 5 == 5
+                if(lhs.getValue().equals(rhs.getValue())) return Environment.create(Boolean.TRUE);    // 5 == 5
                 return Environment.create(Boolean.FALSE);   // 5 == 3
             case "!=":
                 rhs = visit(ast.getRight());
-                if(lhs.equals(rhs)) return Environment.create(Boolean.FALSE);   // 5 != 5
+                if(lhs.getValue().equals(rhs.getValue())) return Environment.create(Boolean.FALSE);   // 5 != 5
                 return Environment.create(Boolean.TRUE);    // 5 != 3
             case "+":
                 rhs = visit(ast.getRight());
@@ -264,7 +381,7 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
             default:
                 throw new RuntimeException("Invalid Binary Operator.");
         }
-        return Environment.NIL;
+        //return Environment.NIL;
     }
 
     // Return the value of the appropriate variable in the current scope
@@ -273,14 +390,30 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
     @Override
     public Environment.PlcObject visit(Ast.Expression.Access ast) {
         Environment.Variable variable = scope.lookupVariable(ast.getName());
-        if(ast.getOffset().isPresent()) {   // List Access
-            //requireType(BigInteger.class, visit(ast.getOffset().get()));
-            // Check offset is 0 through length - 1
+
+        // If there's no offset, simply return the variable's value
+        if (!ast.getOffset().isPresent()) {
+            return variable.getValue();
+        } else {
+            // If there's an offset, it's a list access. First, ensure the variable's value is a List
+            List<Environment.PlcObject> list = requireType(List.class, variable.getValue());
+
+            // Evaluate the offset expression to get the index
+            int index = requireType(BigInteger.class, visit(ast.getOffset().get())).intValueExact();
+
+            // Check for index out of bounds
+            if (index < 0 || index >= list.size()) {
+                throw new RuntimeException("List index out of bounds: " + index);
+            }
+
+            // Return the value at the calculated index
+            return Environment.create(list.get(index));
         }
-        return variable.getValue();
     }
 
-    // Return the value of invoking the appropriate function in the current scope with the evaluated arguments
+
+    // Return the value of invoking hte appropriate function in the current scope with the evaluated arguments
+    // idk about this one
     @Override
     public Environment.PlcObject visit(Ast.Expression.Function ast) {
         Environment.Function function = scope.lookupFunction(ast.getName(), ast.getArguments().size());
@@ -291,12 +424,24 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
         return function.invoke(arguments);
     }
 
+
+
+
+
     // Returns the list as a PlcObject
     // [1,5,10], scope={} => [1,5,10]
     @Override
     public Environment.PlcObject visit(Ast.Expression.PlcList ast) {
-        return Environment.NIL; // TODO
+        List<Object> values = new ArrayList<>();
+        for (Ast.Expression expression : ast.getValues()) {
+            Environment.PlcObject plcObject = visit(expression);
+            values.add(plcObject.getValue()); // Store the raw value, not the PlcObject
+        }
+        return Environment.create(values); // Adjust Environment.create if necessary to handle lists of raw values
     }
+
+
+
 
     /**
      * Helper function to ensure an object is of the appropriate type.
