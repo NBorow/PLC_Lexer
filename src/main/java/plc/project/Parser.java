@@ -106,97 +106,113 @@ public final class Parser {
        if(peek("LIST")) {
            match("LIST");
            if (peek(Token.Type.IDENTIFIER)) {
-               if(peek("LIST")||peek("VAR")||peek("VAL")||peek("FUN")||peek("LET")||peek("SWITCH")||peek("CASE")||peek("DEFAULT")||peek("END")||peek("IF")||peek("DO")||peek("ELSE")||peek("WHILE")||peek("RETURN")||peek("NIL")||peek("TRUE")||peek("FALSE")){
+               if (peek("LIST") || peek("VAR") || peek("VAL") || peek("FUN") || peek("LET") || peek("SWITCH") || peek("CASE") || peek("DEFAULT") || peek("END") || peek("IF") || peek("DO") || peek("ELSE") || peek("WHILE") || peek("RETURN") || peek("NIL") || peek("TRUE") || peek("FALSE") || peek("BOOLEAN")) {
 
-                   if(tokens.has(0)){
+                   if (tokens.has(0)) {
                        throw new ParseException("Expected Nonkeyword Identifier", tokens.get(0).getIndex());
-                   }
-                   else  throw new ParseException("Expected Nonkeyword Identifier", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
+                   } else
+                       throw new ParseException("Expected Nonkeyword Identifier", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
                }
                String name = tokens.get(0).getLiteral();
                match(Token.Type.IDENTIFIER);
-               if(peek("=")){
-                   match("=");
-                   if(peek("[")){
-                       match("[");
-                       ///////////////////////////////////
-                       if(peek("LIST")||peek("VAR")||peek("VAL")||peek("FUN")||peek("LET")||peek("SWITCH")||peek("CASE")||peek("DEFAULT")||peek("END")||peek("IF")||peek("DO")||peek("ELSE")||peek("WHILE")||peek("RETURN") ){
-                           if(tokens.has(0)){
-                               throw new ParseException("Expected Nonkeyword Expression", tokens.get(0).getIndex());
-                           }
-                           else  throw new ParseException("Expected Nonkeyword Expression", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
-
-                       }//keyword
-
-                   if(peek("NIL") || peek("TRUE") || peek("FALSE") || peek(Token.Type.INTEGER) || peek(Token.Type.DECIMAL) || peek(Token.Type.CHARACTER) || peek(Token.Type.STRING) || peek("(") || peek(Token.Type.IDENTIFIER)){
-
-                       List<Ast.Expression> firstlist= new ArrayList<>();
-                       Ast.Expression expr=parseExpression();
-                       firstlist.add(expr);
-                       if (peek(",")) {
-
-                           while (peek(",")) {
-                               match(",");
-                               if (peek("]")) {
-                                   throw new ParseException("Trailing Comma In GLOBAL LIST", tokens.get(0).getIndex());
-                               }
-                               if(peek("LIST")||peek("VAR")||peek("VAL")||peek("FUN")||peek("LET")||peek("SWITCH")||peek("CASE")||peek("DEFAULT")||peek("END")||peek("IF")||peek("DO")||peek("ELSE")||peek("WHILE")||peek("RETURN") ){
-                                   if(tokens.has(0)){
+               if (peek(Token.Type.OPERATOR) && peek(":")) {
+                   match(":");
+                   if (peek(Token.Type.IDENTIFIER)) {
+                       String TypName = tokens.get(0).getLiteral();
+                       match(Token.Type.IDENTIFIER);
+                       if (peek("=")) {
+                           match("=");
+                           if (peek("[")) {
+                               match("[");
+                               ///////////////////////////////////
+                               if (peek("LIST") || peek("VAR") || peek("VAL") || peek("FUN") || peek("LET") || peek("SWITCH") || peek("CASE") || peek("DEFAULT") || peek("END") || peek("IF") || peek("DO") || peek("ELSE") || peek("WHILE") || peek("RETURN")) {
+                                   if (tokens.has(0)) {
                                        throw new ParseException("Expected Nonkeyword Expression", tokens.get(0).getIndex());
-                                   }
-                                   else  throw new ParseException("Expected Nonkeyword Expression", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
+                                   } else
+                                       throw new ParseException("Expected Nonkeyword Expression", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
 
                                }//keyword
 
-                               if(peek("NIL") || peek("TRUE") || peek("FALSE") || peek(Token.Type.INTEGER) || peek(Token.Type.DECIMAL) || peek(Token.Type.CHARACTER) || peek(Token.Type.STRING) || peek("(") || peek(Token.Type.IDENTIFIER)) {
+                               if (peek("NIL") || peek("TRUE") || peek("FALSE") || peek(Token.Type.INTEGER) || peek(Token.Type.DECIMAL) || peek(Token.Type.CHARACTER) || peek(Token.Type.STRING) || peek("(") || peek(Token.Type.IDENTIFIER)) {
 
-                                   firstlist.add(parseExpression());
+                                   List<Ast.Expression> firstlist = new ArrayList<>();
+                                   Ast.Expression expr = parseExpression();
+                                   firstlist.add(expr);
+                                   if (peek(",")) {
 
-                               }
-                               else{
-                                   if(tokens.has(0)){
-                                       throw new ParseException("Expected  Expression", tokens.get(0).getIndex());
+                                       while (peek(",")) {
+                                           match(",");
+                                           if (peek("]")) {
+                                               throw new ParseException("Trailing Comma In GLOBAL LIST", tokens.get(0).getIndex());
+                                           }
+                                           if (peek("LIST") || peek("VAR") || peek("VAL") || peek("FUN") || peek("LET") || peek("SWITCH") || peek("CASE") || peek("DEFAULT") || peek("END") || peek("IF") || peek("DO") || peek("ELSE") || peek("WHILE") || peek("RETURN")) {
+                                               if (tokens.has(0)) {
+                                                   throw new ParseException("Expected Nonkeyword Expression", tokens.get(0).getIndex());
+                                               } else
+                                                   throw new ParseException("Expected Nonkeyword Expression", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
+
+                                           }//keyword
+
+                                           if (peek("NIL") || peek("TRUE") || peek("FALSE") || peek(Token.Type.INTEGER) || peek(Token.Type.DECIMAL) || peek(Token.Type.CHARACTER) || peek(Token.Type.STRING) || peek("(") || peek(Token.Type.IDENTIFIER)) {
+
+                                               firstlist.add(parseExpression());
+
+                                           } else {
+                                               if (tokens.has(0)) {
+                                                   throw new ParseException("Expected  Expression", tokens.get(0).getIndex());
+                                               } else
+                                                   throw new ParseException("Expected  Expression", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
+
+                                           }
+                                       }
+
                                    }
-                                   else  throw new ParseException("Expected  Expression", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
 
+                                   if (peek("]")) {
+                                       match("]");
+                                       Ast.Expression.PlcList seclist = new Ast.Expression.PlcList(firstlist);
+                                       return new Ast.Global(name, TypName,true, Optional.of(seclist));
+                                   } else {
+                                       if (tokens.has(0)) {
+                                           throw new ParseException("Expected ]", tokens.get(0).getIndex());
+                                       } else
+                                           throw new ParseException("Expected ]", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
+                                   }
                                }
+                               //////////////////////////////////////////
+                               else {
+                                   if (tokens.has(0)) {
+                                       throw new ParseException("Expected Expression", tokens.get(0).getIndex());
+                                   } else
+                                       throw new ParseException("Expected Expression", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
+                               }/////////////////////////////////////
+                           } else {
+                               if (tokens.has(0)) {
+                                   throw new ParseException("Expected [", tokens.get(0).getIndex());
+                               } else
+                                   throw new ParseException("Expected [", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
                            }
-
+                       } else {
+                           throw new ParseException("Expected = After The Identifier After LIST", tokens.get(0).getIndex());
                        }
-
-                       if(peek("]")){
-                           match("]");
-                           Ast.Expression.PlcList seclist=new Ast.Expression.PlcList(firstlist);
-                           return new Ast.Global(name,true,Optional.of(seclist));}
-                       else{
-                           if(tokens.has(0)){
-                               throw new ParseException("Expected ]", tokens.get(0).getIndex());
-                           }
-                           else  throw new ParseException("Expected ]", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
-                       }
+                   } else {
+                       if (tokens.has(0)) {
+                           throw new ParseException("Expected Type Identifier After :", tokens.get(0).getIndex());
+                       } else
+                           throw new ParseException("Expected Type Identifier After :", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
                    }
-                   //////////////////////////////////////////
-                   else{
-                       if(tokens.has(0)){
-                           throw new ParseException("Expected Expression", tokens.get(0).getIndex());
-                       }
-                       else  throw new ParseException("Expected Expression", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
-                       }/////////////////////////////////////
-                   }else{
-                       if(tokens.has(0)){
-                           throw new ParseException("Expected [", tokens.get(0).getIndex());
-                       }
-                       else  throw new ParseException("Expected [", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
-                   }
+               } else {
+                   if (tokens.has(0)) {
+                       throw new ParseException("Expected : After The Identifier After LIST", tokens.get(0).getIndex());
+                   } else
+                       throw new ParseException("Expected : After The Identifier After LIST", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
                }
-               else{
-                   throw new ParseException("Expected = After The Identifier After LIST", tokens.get(0).getIndex());
-               }
+
            } else {
-               if(tokens.has(0)){
+               if (tokens.has(0)) {
                    throw new ParseException("Expected Identifier After Var", tokens.get(0).getIndex());
-               }
-               else  throw new ParseException("Expected Identifier After Var", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
+               } else
+                   throw new ParseException("Expected Identifier After Var", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
            }
        }
        else{
@@ -214,27 +230,45 @@ public final class Parser {
     public Ast.Global parseMutable() throws ParseException {
         if(peek("VAR")){
             match("VAR");
-            if(peek(Token.Type.IDENTIFIER)){
-                if(peek("LIST")||peek("VAR")||peek("VAL")||peek("FUN")||peek("LET")||peek("SWITCH")||peek("CASE")||peek("DEFAULT")||peek("END")||peek("IF")||peek("DO")||peek("ELSE")||peek("WHILE")||peek("RETURN")||peek("NIL")||peek("TRUE")||peek("FALSE")){
+            if(peek(Token.Type.IDENTIFIER)) {
+                if (peek("LIST") || peek("VAR") || peek("VAL") || peek("FUN") || peek("LET") || peek("SWITCH") || peek("CASE") || peek("DEFAULT") || peek("END") || peek("IF") || peek("DO") || peek("ELSE") || peek("WHILE") || peek("RETURN") || peek("NIL") || peek("TRUE") || peek("FALSE")) {
 
-                    if(tokens.has(0)){
+                    if (tokens.has(0)) {
                         throw new ParseException("Expected Nonkeyword Identifier", tokens.get(0).getIndex());
-                    }
-                    else  throw new ParseException("Expected Nonkeyword Identifier", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
+                    } else
+                        throw new ParseException("Expected Nonkeyword Identifier", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
                 }
                 String name = tokens.get(0).getLiteral();
                 match(Token.Type.IDENTIFIER);
-                if(peek("=")){
-                    match("=");
-                    if(peek("NIL") || peek("LET") || peek("SWITCH") || peek("IF") || peek("WHILE") || peek("RETURN") || peek("TRUE") || peek("FALSE") || peek(Token.Type.INTEGER) || peek(Token.Type.DECIMAL) || peek(Token.Type.CHARACTER) || peek(Token.Type.STRING) || peek("(") || peek(Token.Type.IDENTIFIER)){
-                        Ast.Expression expr=parseExpression();
-                        return new Ast.Global(name,true,Optional.of(expr));
-                    }
-                }
-            else{
-                    return new Ast.Global(name,true,Optional.empty());
-                }
+                if (peek(Token.Type.OPERATOR) && peek(":")) {
+                    match(":");
+                    if (peek(Token.Type.IDENTIFIER)) {
+                        String TypName = tokens.get(0).getLiteral();
+                        match(Token.Type.IDENTIFIER);
+                        if (peek("=")) {
+                            match("=");
+                            if (peek("NIL") || peek("LET") || peek("SWITCH") || peek("IF") || peek("WHILE") || peek("RETURN") || peek("TRUE") || peek("FALSE") || peek(Token.Type.INTEGER) || peek(Token.Type.DECIMAL) || peek(Token.Type.CHARACTER) || peek(Token.Type.STRING) || peek("(") || peek(Token.Type.IDENTIFIER)) {
+                                Ast.Expression expr = parseExpression();
+                                return new Ast.Global(name, TypName, true, Optional.of(expr));
+                            }
+                        } else {
+                            return new Ast.Global(name, TypName,true, Optional.empty());
+                        }
 
+
+                    } else {
+                        if (tokens.has(0)) {
+                            throw new ParseException("Expected Type Identifier After :", tokens.get(0).getIndex());
+                        } else
+                            throw new ParseException("Expected Type Identifier After :", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
+                    }
+
+                } else {
+                    if (tokens.has(0)) {
+                        throw new ParseException("Expected : After The Identifier After VAR", tokens.get(0).getIndex());
+                    } else
+                        throw new ParseException("Expected : After The Identifier After VAR", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
+                }
             }
             else {
                 if(tokens.has(0)){
@@ -271,11 +305,16 @@ public final class Parser {
                }
                String name = tokens.get(0).getLiteral();
                match(Token.Type.IDENTIFIER);
+               if (peek(Token.Type.OPERATOR) && peek(":")) {
+                   match(":");
+                   if (peek(Token.Type.IDENTIFIER)) {
+                       String TypName = tokens.get(0).getLiteral();
+                       match(Token.Type.IDENTIFIER);
                if(peek("=")){
                    match("=");
                    if(peek("NIL") || peek("LET") || peek("SWITCH") || peek("IF") || peek("WHILE") || peek("RETURN") || peek("TRUE") || peek("FALSE") || peek(Token.Type.INTEGER) || peek(Token.Type.DECIMAL) || peek(Token.Type.CHARACTER) || peek(Token.Type.STRING) || peek("(") || peek(Token.Type.IDENTIFIER)){
                        Ast.Expression expr=parseExpression();
-                       return new Ast.Global(name,false,Optional.of(expr));
+                       return new Ast.Global(name,TypName,false,Optional.of(expr));
                    }
                }
                else{
@@ -283,6 +322,20 @@ public final class Parser {
                        throw new ParseException("Expected = After Identifier After VAL", tokens.get(0).getIndex());
                    }
                    else  throw new ParseException("Expected = After Identifier After VAL", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
+               }
+
+                   } else {
+                       if (tokens.has(0)) {
+                           throw new ParseException("Expected Type Identifier After :", tokens.get(0).getIndex());
+                       } else
+                           throw new ParseException("Expected Type Identifier After :", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
+                   }
+
+               } else {
+                   if (tokens.has(0)) {
+                       throw new ParseException("Expected : After The Identifier After VAL", tokens.get(0).getIndex());
+                   } else
+                       throw new ParseException("Expected : After The Identifier After VAL", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
                }
            }
            else {
@@ -308,26 +361,26 @@ public final class Parser {
      * next tokens start a method, aka {@code FUN}.
      */
     public Ast.Function parseFunction() throws ParseException {
-        if(peek("FUN")) {
+        if (peek("FUN")) {
             match("FUN");
             if (peek(Token.Type.IDENTIFIER)) {
-                if(peek("VAL")||peek("VAR")||peek("LIST")){
-                    if(tokens.has(0)){
+                if (peek("VAL") || peek("VAR") || peek("LIST")) {
+                    if (tokens.has(0)) {
                         throw new ParseException("Global Keyword In Function Name", tokens.get(0).getIndex());
-                    }
-                    else  throw new ParseException("Global Keyword In Function Name", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
+                    } else
+                        throw new ParseException("Global Keyword In Function Name", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
                 }
-                if(peek("FUN")){
-                    if(tokens.has(0)){
+                if (peek("FUN")) {
+                    if (tokens.has(0)) {
                         throw new ParseException("Unexpected FUN Keyword", tokens.get(0).getIndex());
-                    }
-                    else  throw new ParseException("Unexpected FUN Keyword", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
+                    } else
+                        throw new ParseException("Unexpected FUN Keyword", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
                 }
-                if(peek("LET")||peek("SWITCH")||peek("CASE")||peek("DEFAULT")||peek("END")||peek("IF")||peek("DO")||peek("ELSE")||peek("WHILE")||peek("RETURN")||peek("NIL")||peek("TRUE")||peek("FALSE")){
-                    if(tokens.has(0)){
+                if (peek("LET") || peek("SWITCH") || peek("CASE") || peek("DEFAULT") || peek("END") || peek("IF") || peek("DO") || peek("ELSE") || peek("WHILE") || peek("RETURN") || peek("NIL") || peek("TRUE") || peek("FALSE")) {
+                    if (tokens.has(0)) {
                         throw new ParseException("Expected Nonkeyword Identifier", tokens.get(0).getIndex());
-                    }
-                    else  throw new ParseException("Expected Nonkeyword Identifier", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
+                    } else
+                        throw new ParseException("Expected Nonkeyword Identifier", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
                 }
                 String name = tokens.get(0).getLiteral();
                 match(Token.Type.IDENTIFIER);
@@ -335,99 +388,142 @@ public final class Parser {
                     match("(");
                     //  List<Ast.Expression> argumentsb = new ArrayList<>();
                     List<String> arguments = new ArrayList<>();
+                    List<String> ParamTypes = new ArrayList<>();
                     while (!peek(")") && peek(Token.Type.IDENTIFIER)) {
                         if (peek(Token.Type.IDENTIFIER)) {
-                            if(peek("VAL")||peek("VAR")||peek("LIST")){
-                                if(tokens.has(0)){
+                            if (peek("VAL") || peek("VAR") || peek("LIST")) {
+                                if (tokens.has(0)) {
                                     throw new ParseException("Global Keyword In Function Parameter", tokens.get(0).getIndex());
-                                }
-                                else  throw new ParseException("Global Keyword In Function Parameter", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
+                                } else
+                                    throw new ParseException("Global Keyword In Function Parameter", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
                             }
-                            if(peek("FUN")){
-                                if(tokens.has(0)){
+                            if (peek("FUN")) {
+                                if (tokens.has(0)) {
                                     throw new ParseException("Unexpected FUN Keyword", tokens.get(0).getIndex());
-                                }
-                                else  throw new ParseException("Unexpected FUN Keyword", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
+                                } else
+                                    throw new ParseException("Unexpected FUN Keyword", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
                             }
-                            if(peek("LET")||peek("SWITCH")||peek("CASE")||peek("DEFAULT")||peek("END")||peek("IF")||peek("DO")||peek("ELSE")||peek("WHILE")||peek("RETURN")||peek("NIL")||peek("TRUE")||peek("FALSE")){
-                                if(tokens.has(0)){
+                            if (peek("LET") || peek("SWITCH") || peek("CASE") || peek("DEFAULT") || peek("END") || peek("IF") || peek("DO") || peek("ELSE") || peek("WHILE") || peek("RETURN") || peek("NIL") || peek("TRUE") || peek("FALSE")) {
+                                if (tokens.has(0)) {
                                     throw new ParseException("Expected Nonkeyword Identifier", tokens.get(0).getIndex());
-                                }
-                                else  throw new ParseException("Expected Nonkeyword Identifier", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
+                                } else
+                                    throw new ParseException("Expected Nonkeyword Identifier", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
                             }
                             arguments.add(tokens.get(0).getLiteral());
                             Ast.Expression first = parseExpression();
-                            if (peek(",")) {
-                                match(",");
-                                if (peek(")")) {
-                                    throw new ParseException("Trailing Comma In Function Call", tokens.get(0).getIndex());
+                            if (peek(Token.Type.OPERATOR) && peek(":")) {
+                                match(":");
+                                if (peek(Token.Type.IDENTIFIER)) {
+                                    ParamTypes.add(tokens.get(0).getLiteral());
+                                    match(Token.Type.IDENTIFIER); //remove? name identifier matched using first=parseExpression. matching this identifier should work?
+                                    if (peek(",")) {
+                                        match(",");
+                                        if (peek(")")) {
+                                            throw new ParseException("Trailing Comma In Function Call", tokens.get(0).getIndex());
+                                        }
+                                    }
+                                } else {
+                                    if (tokens.has(0)) {
+                                        throw new ParseException("Expected Type Identifier After :", tokens.get(0).getIndex());
+                                    } else
+                                        throw new ParseException("Expected Type Identifier After :", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
                                 }
+
+                            } else {
+                                if (tokens.has(0)) {
+                                    throw new ParseException("Expected : After Identifier", tokens.get(0).getIndex());
+                                } else
+                                    throw new ParseException("Expected : After Identifier", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
                             }
+
                         } else {
-                            if(tokens.has(0)){
+                            if (tokens.has(0)) {
                                 throw new ParseException("Expected Identifier", tokens.get(0).getIndex());
-                            }
-                            else  throw new ParseException("Expected Identifier", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
+                            } else
+                                throw new ParseException("Expected Identifier", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
                         }
+
+
                     }
+
+
                     if (peek(")")) {
                         match(")");
+                        Optional<String> initializer = Optional.empty();
+                        if (peek(Token.Type.OPERATOR) && peek(":")) {
+                            match(":");
+                            if (peek(Token.Type.IDENTIFIER)) {
+                                initializer=Optional.of(tokens.get(0).getLiteral());
+                                match(Token.Type.IDENTIFIER);
+                            }
+                            else{
+                                if (tokens.has(0)) {
+                                    throw new ParseException("Expected Type Identifier After :", tokens.get(0).getIndex());
+                                } else
+                                    throw new ParseException("Expected Type Identifier After :", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
+                            }
+                        }
+
                         if (peek("DO")) {
                             match("DO");
                             if ((peek("NIL") || peek("LET") || peek("SWITCH") || peek("IF") || peek("WHILE") || peek("RETURN") || peek("TRUE") || peek("FALSE") || peek(Token.Type.INTEGER) || peek(Token.Type.DECIMAL) || peek(Token.Type.CHARACTER) || peek(Token.Type.STRING) || peek("(") || peek(Token.Type.IDENTIFIER))) {
-                                if(peek("VAL")||peek("VAR")||peek("LIST")){
-                                    if(tokens.has(0)){
+                                if (peek("VAL") || peek("VAR") || peek("LIST")) {
+                                    if (tokens.has(0)) {
                                         throw new ParseException("Global Keyword In Function Block", tokens.get(0).getIndex());
-                                    }
-                                    else  throw new ParseException("Global Keyword In Function Block", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
+                                    } else
+                                        throw new ParseException("Global Keyword In Function Block", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
                                 }
-                                if(peek("FUN")){
-                                    if(tokens.has(0)){
+                                if (peek("FUN")) {
+                                    if (tokens.has(0)) {
                                         throw new ParseException("Unexpected FUN Keyword", tokens.get(0).getIndex());
-                                    }
-                                    else  throw new ParseException("Unexpected FUN Keyword", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
+                                    } else
+                                        throw new ParseException("Unexpected FUN Keyword", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
                                 }
                                 List<Ast.Statement> bloc = parseBlock(); //add parseexception check?
                                 if (peek("END")) {
                                     match("END");
-                                    return new Ast.Function(name, arguments, bloc);
+                                    return new Ast.Function(name,arguments,ParamTypes,initializer,bloc);
+
                                 } else {
-                                    if(tokens.has(0)){
+                                    if (tokens.has(0)) {
                                         throw new ParseException("Expected END", tokens.get(0).getIndex());
-                                    }
-                                    else  throw new ParseException("Expected END", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
+                                    } else
+                                        throw new ParseException("Expected END", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
                                 }
                             } else {
-                                if(tokens.has(0)){
+                                if (tokens.has(0)) {
                                     throw new ParseException("Expected Block", tokens.get(0).getIndex());
-                                }
-                                else  throw new ParseException("Expected Block", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
+                                } else
+                                    throw new ParseException("Expected Block", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
                             }
                         } else {
-                            if(tokens.has(0)){
+                            if (tokens.has(0)) {
                                 throw new ParseException("Expected DO", tokens.get(0).getIndex());
-                            }
-                            else  throw new ParseException("Expected DO", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
+                            } else
+                                throw new ParseException("Expected DO", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
                         }
-                    } else {
-                        if(tokens.has(0)){
-                            throw new ParseException("Expected )", tokens.get(0).getIndex());
-                        }
-                        else  throw new ParseException("Expected )", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
-                    }
+
+
+
                 } else {
-                    if(tokens.has(0)){
-                        throw new ParseException("Expected (", tokens.get(0).getIndex());
-                    }
-                    else  throw new ParseException("Expected (FUN)", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
+                    if (tokens.has(0)) {
+                        throw new ParseException("Expected )", tokens.get(0).getIndex());
+                    } else
+                        throw new ParseException("Expected )", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
                 }
             } else {
-                if(tokens.has(0)){
-                    throw new ParseException("Expected Identifier After FUN", tokens.get(0).getIndex());
-                }
-                else  throw new ParseException("Expected Identifier After FUN", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
+                if (tokens.has(0)) {
+                    throw new ParseException("Expected (", tokens.get(0).getIndex());
+                } else
+                    throw new ParseException("Expected (FUN)", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
             }
+        } else {
+            if (tokens.has(0)) {
+                throw new ParseException("Expected Identifier After FUN", tokens.get(0).getIndex());
+            } else
+                throw new ParseException("Expected Identifier After FUN", tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length());
         }
+    }
         else{
             if(tokens.has(0)){
                 throw new ParseException("Expected FUN", tokens.get(0).getIndex());
@@ -556,6 +652,14 @@ if(peek(Token.Type.IDENTIFIER)){
         String name = tokens.get(0).getLiteral();
         tokens.advance(); // Consume the identifier token
 
+    Optional<String> initializerStr = Optional.empty();
+    if (peek(Token.Type.OPERATOR) && peek(":")) {
+        match(":");
+        if (peek(Token.Type.IDENTIFIER)) {
+            initializerStr = Optional.of(tokens.get(0).getLiteral());
+            match(Token.Type.IDENTIFIER);
+        }
+    }
         // Optional initialization expression
         Optional<Ast.Expression> initializer = Optional.empty();
         if (peek("=")) {
@@ -565,7 +669,7 @@ if(peek(Token.Type.IDENTIFIER)){
         }
 
         // Ensure the statement ends with a semicolon
-        if (!peek(";")) {
+        if (!match(";")) {
             if(tokens.has(0)){
                 throw new ParseException("Expected ;", tokens.get(0).getIndex());
             }
@@ -573,7 +677,8 @@ if(peek(Token.Type.IDENTIFIER)){
         }
 
         // Return the declaration statement
-        return new Ast.Statement.Declaration(name, initializer);}
+    return new Ast.Statement.Declaration(name,initializerStr,initializer);
+  }
 
 else{
     if(tokens.has(0)){
@@ -805,7 +910,7 @@ else{
             else  throw new ParseException("Expected Expression After Return", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
         }
         Ast.Expression value=parseExpression();
-        if (!peek(";")) {
+        if (!match(";")) {  // changed to a match statement
             if(tokens.has(0)){
                 throw new ParseException("Expected ; After Return Value", tokens.get(0).getIndex());
             }
@@ -970,18 +1075,18 @@ else{
                 }
                 else  throw new ParseException("Unexpected Keyword", tokens.get(-1).getIndex()+tokens.get(-1).getLiteral().length());
             }
-            String name = tokens.get(0).getLiteral();
-
+            // First check if java supported identifier
             if (peek("TRUE")) {
                 match("TRUE");
                 return new Ast.Expression.Literal(true);
             } else if(peek("FALSE")) {
-            match("FALSE");
+                match("FALSE");
                 return new Ast.Expression.Literal(false);}
              else if (peek("NIL")) {
                 match("NIL");
                 return new Ast.Expression.Literal(null);}
-
+            // else, match arguments
+            String name = tokens.get(0).getLiteral();
             match(Token.Type.IDENTIFIER);
             if (peek("(")) {
                 match("(");
@@ -1084,7 +1189,7 @@ else{
                if (patterns[i]!=tokens.get(i).getType()) {
                    return false;
                }
-           }else if (patterns[i] instanceof String){
+           } else if (patterns[i] instanceof String){
                if(!patterns[i].equals(tokens.get(i).getLiteral())){
                    return false;
                }

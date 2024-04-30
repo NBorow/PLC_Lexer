@@ -410,7 +410,6 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
         // If there's no offset, simply return the variable's value
         if (!ast.getOffset().isPresent()) {
-           // System.out.println(variable.getValue());;
             return variable.getValue();
         } else {
             // If there's an offset, it's a list access. First, ensure the variable's value is a List
@@ -430,14 +429,13 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
     }
 
 
-    // Return the value of invoking hte appropriate function in the current scope with the evaluated arguments
+    // Return the value of invoking the appropriate function in the current scope with the evaluated arguments
     // idk about this one
     @Override
     public Environment.PlcObject visit(Ast.Expression.Function ast) {
         Environment.Function function = scope.lookupFunction(ast.getName(), ast.getArguments().size());
         List<Environment.PlcObject> arguments = new ArrayList<>();
         for(Ast.Expression e : ast.getArguments()) {
-        //    System.out.println(e);
             arguments.add(visit(e));   // Converting each expression to a PlcObject to pass to function
         }
         return function.invoke(arguments);

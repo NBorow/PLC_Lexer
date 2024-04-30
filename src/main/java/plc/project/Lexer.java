@@ -159,7 +159,8 @@ public final class Lexer {
         // First, handle compound operators to ensure they are matched correctly
         if(match("!") || match("=")) {
             match("=");
-        } else if (match("&&") || match("||")) {
+        } else if (match("&") && match("&")) {  // originally was "&&" but was failing on peek
+        } else if (match("|") && match("|")) {
         } else {
             // Any Character (excluding whitespace)
             match(".");
@@ -187,13 +188,13 @@ public final class Lexer {
      * true. Hint - it's easiest to have this method simply call peek.
      */
     public boolean match(String... patterns) {
-       boolean peek = peek(patterns);
-       if (peek) {
-           for(int i=0; i < patterns.length; i++){
-               chars.advance();
-           }
-       }
-       return peek;
+        boolean peek = peek(patterns);
+        if (peek) {
+            for(int i=0; i < patterns.length; i++){
+                chars.advance();
+            }
+        }
+        return peek;
     }
 
     /**
@@ -219,7 +220,7 @@ public final class Lexer {
         }
 
         public char get(int offset) {
-         //   System.out.println(input.charAt(index + offset));
+            //   System.out.println(input.charAt(index + offset));
             return input.charAt(index + offset);
         }
 
